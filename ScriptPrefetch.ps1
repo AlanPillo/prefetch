@@ -1,44 +1,72 @@
-# By semental
-$dateString = Read-Host "Enter a date (MM-dd-yyyy) to filter the Prefetch files"
+# By semental & espouken
+
+function Get-OldestConnectTime {
+    $users = Get-WmiObject -Class Win32_NetworkLoginProfile | Where-Object { $_.LastLogon -ne $null }
+    $oldestDate = $null
+
+    foreach ($user in $users) {
+        $connectTime = $user.ConvertToDateTime($user.LastLogon)
+        if ($connectTime) {
+            if (-not $oldestDate -or $connectTime -lt $oldestDate) {
+                $oldestDate = $connectTime
+            }
+        }
+    }
+    return $oldestDate
+}
+
+Write-Host "
+ ██╗    ██╗██╗███╗   ██╗██████╗ ██████╗ ███████╗███████╗███████╗████████╗ ██████╗██╗  ██╗
+ ██║    ██║██║████╗  ██║██╔══██╗██╔══██╗██╔════╝██╔════╝██╔════╝╚══██╔══╝██╔════╝██║  ██║
+ ██║ █╗ ██║██║██╔██╗ ██║██████╔╝██████╔╝█████╗  █████╗  █████╗     ██║   ██║     ███████║
+ ██║███╗██║██║██║╚██╗██║██╔═══╝ ██╔══██╗██╔══╝  ██╔══╝  ██╔══╝     ██║   ██║     ██╔══██║
+ ╚███╔███╔╝██║██║ ╚████║██║     ██║  ██║███████╗██║     ███████╗   ██║   ╚██████╗██║  ██║
+  ╚══╝╚══╝ ╚═╝╚═╝  ╚═══╝╚═╝     ╚═╝  ╚═╝╚══════╝╚═╝     ╚══════╝   ╚═╝    ╚═════╝╚═╝  ╚═╝
+                                                                                        
+" -ForegroundColor Magenta
 
 
-try {
-    $date = [DateTime]::ParseExact($dateString, "MM-dd-yyyy", $null)
-} catch {
-    Write-Error "Invalid date format. Please enter the date in MM-dd-yyyy format."
+Write-Host "                              DISCORD.GG/ASTRALMC  -  MADE BY SEMENTAL & ESPOUKEN" -ForegroundColor DarkGray
+
+Start-Sleep -Seconds 2
+# conseguir el oldest entry
+$date = Get-OldestConnectTime
+
+if (-not $date) {
+    Write-Error "No valid connect time found for any user."
     exit
 }
 
 $prefetchPath = "C:\Windows\Prefetch"
-$outputPath = "C:\SSPrefetch"
+$tempPath = [System.IO.Path]::Combine($env:TEMP, "ScriptPrefetch")
 
-
-if (!(Test-Path -Path $outputPath -PathType Container)) {
-    New-Item -ItemType Directory -Path $outputPath | Out-Null
+if (!(Test-Path -Path $tempPath -PathType Container)) {
+    New-Item -ItemType Directory -Path $tempPath | Out-Null
 } else {
     # Limpiar el directorio de salida si ya existe
-    Remove-Item -Path "$outputPath\*" -Force
+    Remove-Item -Path "$tempPath\*" -Force
 }
 
-$pfFiles = Get-ChildItem -Path $prefetchPath -Filter "*.pf" | Where-Object {$_.LastWriteTime.Date -eq $date}
+# todos los PF con la fecha de instancia o depsues
+$pfFiles = Get-ChildItem -Path $prefetchPath -Filter "*.pf" | Where-Object {$_.LastWriteTime -ge $date}
 foreach ($pfFile in $pfFiles) {
-    $outputFile = Join-Path -Path $outputPath -ChildPath $pfFile.Name
+    $outputFile = Join-Path -Path $tempPath -ChildPath $pfFile.Name
     Copy-Item -Path $pfFile.FullName -Destination $outputFile -Force
 }
 
-
 $url = "https://www.nirsoft.net/utils/winprefetchview-x64.zip"
-$zipFile = Join-Path -Path $outputPath -ChildPath "winprefetchview-x64.zip"
-$exePath = Join-Path -Path $outputPath -ChildPath "WinPrefetchView.exe"
-
+$zipFile = Join-Path -Path $tempPath -ChildPath "winprefetchview-x64.zip"
+$exePath = Join-Path -Path $tempPath -ChildPath "WinPrefetchView.exe"
 
 Invoke-WebRequest -Uri $url -OutFile $zipFile
 
-
 Add-Type -AssemblyName System.IO.Compression.FileSystem
-[System.IO.Compression.ZipFile]::ExtractToDirectory($zipFile, $outputPath)
+[System.IO.Compression.ZipFile]::ExtractToDirectory($zipFile, $tempPath)
 
 Remove-Item -Path $zipFile
 
-$arguments = "/folder `"$outputPath`""
-Start-Process -FilePath $exePath -ArgumentList $arguments -Verb RunAs
+$arguments = "/folder `"$tempPath`""
+Start-Process -FilePath $exePath -ArgumentList $arguments -Verb RunAs -Wait
+
+# Cleanup borrar luego de terminado de ejecutar
+Remove-Item -Path $tempPath -Recurse -Force
