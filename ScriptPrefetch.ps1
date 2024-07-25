@@ -5,18 +5,34 @@ function Get-OldestConnectTime {
     $oldestDate = $null
 
     foreach ($user in $users) {
-        $connectTime = $user.ConvertToDateTime($user.LastLogon)
+        # Convert LastLogon to DateTime
+        $connectTime = [System.Management.ManagementDateTimeConverter]::ToDateTime($user.LastLogon)
+
         if ($connectTime) {
+            # Debugging: Print user and connect time
+            Write-Host "Checking user: $($user.Name) with logon time: $connectTime"
+
             if (-not $oldestDate -or $connectTime -lt $oldestDate) {
+                # Debugging: Indicate when the oldest date is updated
+                Write-Host "Updating oldest date to: $connectTime"
                 $oldestDate = $connectTime
-    
             }
         }
     }
-    Write-Host $oldestDate
-    return $oldestDate
+
+    # Output and return the oldest date
+    if ($oldestDate) {
+        Write-Host "Oldest logon time found: $oldestDate"
+    } else {
+        Write-Host "No logon times found."
+    }
     
+    return $oldestDate
 }
+
+# Call the function
+Get-OldestConnectTime
+
 
 Write-Host "
  ██╗    ██╗██╗███╗   ██╗██████╗ ██████╗ ███████╗███████╗███████╗████████╗ ██████╗██╗  ██╗
