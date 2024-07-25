@@ -9,10 +9,13 @@ function Get-OldestConnectTime {
         if ($connectTime) {
             if (-not $oldestDate -or $connectTime -lt $oldestDate) {
                 $oldestDate = $connectTime
+    
             }
         }
     }
+    Write-Host $oldestDate
     return $oldestDate
+    
 }
 
 Write-Host "
