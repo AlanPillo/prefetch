@@ -1,38 +1,18 @@
 # By semental & espouken
 
 function Get-OldestConnectTime {
-    $users = Get-WmiObject -Class Win32_NetworkLoginProfile | Where-Object { $_.LastLogon -ne $null }
-    $oldestDate = $null
+    $oldestLogon = Get-CimInstance -ClassName Win32_LogonSession | 
+        Where-Object {$_.LogonType -eq 2 -or $_.LogonType -eq 10} | 
+        Sort-Object -Property StartTime | 
+        Select-Object -First 1
 
-    foreach ($user in $users) {
-        # Convert LastLogon to DateTime
-        $connectTime = [System.Management.ManagementDateTimeConverter]::ToDateTime($user.LastLogon)
-
-        if ($connectTime) {
-            # Debugging: Print user and connect time
-            Write-Host "Checking user: $($user.Name) with logon time: $connectTime"
-
-            if (-not $oldestDate -or $connectTime -lt $oldestDate) {
-                # Debugging: Indicate when the oldest date is updated
-                Write-Host "Updating oldest date to: $connectTime"
-                $oldestDate = $connectTime
-            }
-        }
-    }
-
-    # Output and return the oldest date
-    if ($oldestDate) {
-        Write-Host "Oldest logon time found: $oldestDate"
+    if ($oldestLogon) {
+        $oldestDate = $oldestLogon.StartTime
+        return $oldestDate
     } else {
-        Write-Host "No logon times found."
+        return $null
     }
-    
-    return $oldestDate
 }
-
-# Call the function
-Get-OldestConnectTime
-
 
 Write-Host "
  ██╗    ██╗██╗███╗   ██╗██████╗ ██████╗ ███████╗███████╗███████╗████████╗ ██████╗██╗  ██╗
@@ -45,14 +25,16 @@ Write-Host "
 " -ForegroundColor Magenta
 
 
-Write-Host "                              DISCORD.GG/ASTRALMC  -  MADE BY SEMENTAL & ESPOUKEN" -ForegroundColor DarkGray
+Write-Host "                                             DISCORD.GG/ASTRALMC  -  MADE BY SEMENTAL & ESPOUKEN" -ForegroundColor Cyan
 
 Start-Sleep -Seconds 2
 # conseguir el oldest entry
 $date = Get-OldestConnectTime
 
-if (-not $date) {
-    Write-Error "No valid connect time found for any user."
+if ($date) {
+    # Write-Host "oldest date: $date"
+} else {
+    Write-Error "QUE MIERDA PASO?!?!!?."
     exit
 }
 
